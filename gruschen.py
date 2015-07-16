@@ -6,10 +6,18 @@ from cutoff import CutoffTest
 from mfcc import MFCCTest
 import signal_comparison
 from sound_file import SoundFileTest
-# the visualization is not very useful at the moment
-# import visualization
 
 # TODO:  implement tests for all packages
+
+
+class Recording:
+    def __init__(self, print_name, text, filename):
+        self.__print_name = print_name
+        self.text = text
+        self.filename = filename
+
+    def __str__(self):
+        return self.__print_name
 
 
 def run_tests():
@@ -18,11 +26,15 @@ def run_tests():
 
 if __name__ == "__main__":
     try:
-        file_names = ["recordings//" + str + ".wav" for str in
-                      ["ja1", "ja2", "ja3", "nein1", "nein2", "nein3"]]
-        metrics = signal_comparison.compare_files(file_names, True)
-        # nodes, edges = visualization.build_graph(metrics)
-        # visualization.print_graph(nodes, edges)
+        path = ""
+        if len(sys.argv) > 1:
+            path = sys.argv[1]
+        files = {s + str(i): Recording(s + str(i),
+                                       s,
+                                       path + s + str(i) + ".wav")
+                 for i in range(1, 15)
+                 for s in ["yes", "no", "red", "green", "yellow"]}
+        metrics = signal_comparison.compare_files(files, False)
     except Exception as e:
         traceback.print_exc(file=sys.stdout)
         print(repr(e))

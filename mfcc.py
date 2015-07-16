@@ -116,8 +116,8 @@ logarithm_bottom_line = -50
 mel_bins_count = 25
 
 
-# dynamic time warping algorithm
-def dynamic_time_warping_metric(s, t):
+# dynamic time warping algorithm - squared
+def dynamic_time_warping_metric_sqr(s, t):
     n = len(s)
     m = len(t)
     dtw = np.zeros((n, m))
@@ -128,9 +128,12 @@ def dynamic_time_warping_metric(s, t):
     dtw[0][0] = 0
 
     for i in range(1, n):
+        si = s[i]
+        dtwi = dtw[i]
         for j in range(1, m):
-            cost = np.linalg.norm(s[i] - t[j])
-            dtw[i][j] = cost + min([dtw[i-1][j], dtw[i][j-1], dtw[i-1][j-1]])
+            diff = si - t[j]
+            cost = np.inner(diff, diff)
+            dtwi[j] = cost + min(dtw[i-1][j], min(dtwi[j-1], dtw[i-1][j-1]))
     return dtw[n-1][m-1]
 
 
