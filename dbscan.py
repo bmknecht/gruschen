@@ -8,9 +8,9 @@ def dbscan(metrics, eps, minimum_points_per_cluster):
         not_visited = not_visited[1:]
         neighbours = _determine_neighbours(metrics, not_visited_point, eps)
         if len(neighbours) < minimum_points_per_cluster:
-            noise.append(not_visited_point)
+            noise += [not_visited_point]
         else:
-            clusters.append(Cluster())
+            clusters += [Cluster()]
             clusters[-1].add(not_visited_point)
             while neighbours:
                 neighbour = neighbours[0]
@@ -40,7 +40,7 @@ class Cluster:
         self.members = []
 
     def add(self, point):
-        self.members.append(point)
+        self.members += [point]
 
 
 def _determine_neighbours(metrics, center, distance):
