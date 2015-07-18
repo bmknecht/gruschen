@@ -26,7 +26,7 @@ def _split_signal_into_windows(signal):
     samples_per_window = utility.compute_samples_per_window(signal.sampleRate)
     splittable_size = samples_per_window * (len(signal) // samples_per_window)
     window_range = range(0, splittable_size, samples_per_window)
-    return np.asarray([signal[i:i+samples_per_window] for i in window_range])
+    return np.array([signal[i:i+samples_per_window] for i in window_range])
 
 
 def _determine_noise_window(signal):
@@ -48,10 +48,10 @@ def _subtract_noise_frequencies(signal, noise_spectrum):
 
 
 def _remove_noise_from_signal_windows(windows, noise_spectrum):
-    spectrums = np.asarray([np.fft.rfft(window) for window in windows])
+    spectrums = np.array([np.fft.rfft(window) for window in windows])
     spectrums_no_noise = np.array([_remove_noise(window, noise_spectrum) for
                                    window in spectrums])
-    return np.asarray([np.fft.irfft(window) for window in spectrums_no_noise])
+    return np.array([np.fft.irfft(window) for window in spectrums_no_noise])
 
 
 def _remove_noise(spectrum, noise_spectrum):
@@ -74,4 +74,4 @@ def _combine_windows_to_signal(windows):
     for window in windows:
         for element in window:
             combination.append(element)
-    return np.asarray(combination)
+    return np.array(combination)
