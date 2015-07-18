@@ -16,25 +16,6 @@ class MFCCTest(unittest.TestCase):
     def sine(self):
         return np.array([math.sin(x) for x in range(self.testSize)])
 
-    def test_dynamic_time_warping_metric_sqr(self):
-        dtwm = dynamic_time_warping_metric_sqr
-        sine = np.array([self.sine().tolist(),
-                         self.sine().tolist(),
-                         self.sine().tolist()])
-        self.assertLess(dtwm(sine, sine), 1)
-        self.assertLess(dtwm(sine, sine+0.9),
-                        dtwm(sine, sine+1))
-        self.assertLess(dtwm(np.zeros((self.testSize, self.testSize)),
-                             sine),
-                        dtwm(np.zeros((self.testSize, self.testSize)),
-                             sine*1.1))
-        self.assertLess(dtwm(np.zeros((self.testSize, self.testSize)),
-                             np.zeros((2*self.testSize, self.testSize))+1),
-                        dtwm(np.zeros((self.testSize, self.testSize)),
-                             np.zeros((2*self.testSize, self.testSize))+1.1))
-        self.assertAlmostEqual(dtwm(sine, sine*1.1),
-                               dtwm(sine*1.1, sine))
-
     def test_pre_emphasize(self):
         test_signal = _pre_emphasize(np.array([_ for _ in
                                                range(self.testSize)]))
@@ -118,27 +99,9 @@ class MFCCTest(unittest.TestCase):
 
 logarithm_smallest_argument = 1e-22
 logarithm_bottom_line = -50
+lowest_useful_frequency = 200
 mel_bins_count = 25
-
-
-# dynamic time warping - squared
-def dynamic_time_warping_metric_sqr(s, t):
-    s = np.array([[_ for _ in f] for f in s])
-    t = np.array([[_ for _ in f] for f in t])
-    n = len(s)
-    m = len(t)
-    dtw = np.zeros((n+1, m+1))
-    dtw[1:, 0] = float("inf")
-    dtw[0, 1:] = float("inf")
-    dtw[0, 0] = 0
-
-    for i in range(1, n+1):
-        diff = s[i-1] - t
-        cost = np.array([np.inner(d, d) for d in diff])
-        for j in range(1, m+1):
-            dtw[i, j] = cost[j-1] + min(dtw[i-1, j],
-                                      min(dtw[i, j-1], dtw[i-1, j-1]))
-    return dtw[n, m]
+useful_mel_bins_count = 13
 
 
 def mfcc_diagnostics(signal):
@@ -202,7 +165,12 @@ def _window(signal):
 
 
 def _fft(signal):
-    return [Signal(abs(np.fft.fft(frame)) ** 2,
+    def abs_square(c): return c.real*c.real + c.imag*c.imag
+
+    def abs_square_array(x): return np.fromiter((abs_square(c) for c in x),
+                                                np.float,
+                                                len(x))
+    return [Signal(abs_square_array(frame),
                    signal[0].sampleRate) for frame in signal]
 
 
@@ -214,7 +182,6 @@ def _mel_filtering(signal):
 
 
 def _mel_bin_center(samplerate, fft_size):
-    lowest_useful_frequency = 200
     lowest_uselful_mel_frequency = _mel_transform(lowest_useful_frequency)
     center_mel_frequencies = np.linspace(lowest_uselful_mel_frequency,
                                          _mel_transform(samplerate / 2 - 1),
@@ -235,10 +202,13 @@ def _mel_transform_invert(mel_frequencies):
 
 def _mel_filter_window_sum(signal, bin_index, center_of_bins):
     a, b, c = center_of_bins
-    first_half_weights = (np.arange(a, b+1)-a+1) / (b-a+1)
-    second_half_weights = 1 - (np.arange(b, c+1)-b)/(c-b+1)
-    return (np.dot(first_half_weights, signal[a:b+1]) +
-            np.dot(second_half_weights, signal[b:c+1]))
+
+    def l1(x, y): return x / (b-a+1) * y
+
+    def l2(x, y): return (1 - x / (c-b+1)) * y
+
+    return (sum(map(l1, range(1, b-a+2), signal[a:b+1])) +
+            sum(map(l2, range(0, c+1-b), signal[b:c+1])))
 
 
 def _non_linear_transform(signal):
@@ -250,7 +220,6 @@ def _non_linear_transform(signal):
 
 
 def _cepstral_coefficients(signal):
-    useful_mel_bins_count = 13
     return [np.array([_cepstral_single_coefficient(frame, i)
                       for i in range(useful_mel_bins_count)])
             for frame in signal]
