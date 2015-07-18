@@ -1,30 +1,30 @@
 
 def dbscan(metrics, eps, minimum_points_per_cluster):
     clusters = []
-    not_visited = [name for name in metrics]
-    noise = []
-    while not_visited:
-        not_visited_point = not_visited[0]
-        not_visited = not_visited[1:]
-        neighbours = _determine_neighbours(metrics, not_visited_point, eps)
+    visited = set()
+    noise = set()
+    for node_name in metrics:
+        if node_name in visited:
+            continue
+        visited.add(node_name)
+        neighbours = _determine_neighbours(metrics, node_name, eps)
         if len(neighbours) < minimum_points_per_cluster:
-            noise += [not_visited_point]
+            noise.add(node_name)
         else:
-            clusters += [Cluster()]
-            clusters[-1].add(not_visited_point)
+            new_cluster = Cluster()
+            new_cluster.add(node_name)
             while neighbours:
-                neighbour = neighbours[0]
-                neighbours = neighbours[1:]
-                if neighbour in not_visited:
-                    not_visited.remove(neighbour)
+                neighbour = neighbours.pop()
+                if neighbour not in visited:
+                    visited.add(neighbour)
                     neighbours_2nd = _determine_neighbours(metrics,
                                                            neighbour,
                                                            eps)
                     if len(neighbours_2nd) >= minimum_points_per_cluster:
-                        neighbours = _join_sets(neighbours,
-                                                neighbours_2nd)
+                        neighbours.union(neighbours_2nd)
                 if not _point_is_in_any_cluster(neighbour, clusters):
-                    clusters[-1].add(neighbour)
+                    new_cluster.add(neighbour)
+            clusters += [new_cluster]
 
     print("/////////////////////////////\ndbscan result:\n")
     print("clusters are:")
@@ -33,19 +33,23 @@ def dbscan(metrics, eps, minimum_points_per_cluster):
     print("considered noise:")
     print(noise)
     print("\n")
+    return clusters
 
 
 class Cluster:
     def __init__(self):
-        self.members = []
+        self.members = set()
 
     def add(self, point):
-        self.members += [point]
+        self.members.add(point)
+
+    def union(self, other_set):
+        self.members = self.members.union(other_set)
 
 
 def _determine_neighbours(metrics, center, distance):
-    return [neighbour for neighbour in metrics[center]
-            if metrics[center][neighbour] < distance] + [center]
+    return set([neighbour for neighbour in metrics[center]
+                if metrics[center][neighbour] < distance])
 
 
 def _point_is_in_any_cluster(point, clusters):
@@ -53,7 +57,3 @@ def _point_is_in_any_cluster(point, clusters):
         if point in cluster.members:
             return True
     return False
-
-
-def _join_sets(set1, set2):
-    return set1.extend([p for p in set2 if p not in set1])
