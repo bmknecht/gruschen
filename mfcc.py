@@ -165,13 +165,14 @@ def _window(signal):
 
 
 def _fft(signal):
+
     def abs_square(c): return c.real*c.real + c.imag*c.imag
 
     def abs_square_array(x): return np.fromiter((abs_square(c) for c in x),
                                                 np.float,
                                                 len(x))
-    return [Signal(abs_square_array(frame),
-                   signal[0].sampleRate) for frame in signal]
+    return [Signal(abs_square_array(np.fft.fft(frame)), signal[0].sampleRate)
+            for frame in signal]
 
 
 def _mel_filtering(signal):

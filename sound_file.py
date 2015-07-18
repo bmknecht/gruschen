@@ -24,7 +24,7 @@ class SoundFileTest(unittest.TestCase):
         self.assertEqual(signal.sampleRate, retrieved_signal.sampleRate)
         scaled_retrieved = signal[0] / retrieved_signal[0] * retrieved_signal
         for i in range(len(signal)):
-            # this test fails write now, because the loss of the conversion
+            # this test fails right now, because the loss of the conversion
             # while saving / loading the soundfile is too big
             self.assertAlmostEqual(signal[i], scaled_retrieved[i])
 

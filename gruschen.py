@@ -33,7 +33,7 @@ if __name__ == "__main__":
         files = [Recording(s + str(i), s, path + s + str(i) + ".wav")
                  for i in range(1, 11)
                  for s in ["yes", "no", "red", "green", "yellow"]]
-        distances = signal_comparison.compare_files(files, False)
+        distances = signal_comparison.compare_files(files)
     except Exception as e:
         traceback.print_exc(file=sys.stdout)
         print(repr(e))
