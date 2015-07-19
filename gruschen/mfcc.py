@@ -99,21 +99,9 @@ class MFCCTest(unittest.TestCase):
 
 logarithm_smallest_argument = 1e-22
 logarithm_bottom_line = -50
-lowest_useful_frequency = 200
+lowest_useful_frequency = 300
 mel_bins_count = 25
 useful_mel_bins_count = 13
-
-
-def mfcc_diagnostics(signal):
-    frame_size, frame_overlap = _frame_characteristics(signal.sampleRate)
-    center_of_bins = _mel_bin_center(signal.sampleRate, frame_size * 2)
-    print("file MFCC diagnostics: ")
-    print("\tsample rate: {} Hz".format(signal.sampleRate))
-    print("\tframe size: {}".format(frame_size))
-    print("\tframe overlap: {}".format(frame_overlap))
-    frame_length_ms = int(frame_size / signal.sampleRate * 1000)
-    print("\tframe length: {} ms".format(frame_length_ms))
-    print("\tcenter of Mel bins: {}".format(center_of_bins))
 
 
 # MFCC
