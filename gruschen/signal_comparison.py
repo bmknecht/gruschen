@@ -4,11 +4,10 @@ import time
 import numpy as np
 
 from . import (
-    dbscan,
-    dynamic_time_warping,
+    clustering,
     metrics,
     mfcc,
-    pre_processing,
+    preprocessing,
     sound_file,
 )
 
@@ -45,7 +44,7 @@ def _percent(part, total):
 def compare_files(files):
     distances = _compute_file_distances(files)
     _print_comparison_with_correct_result(distances, files)
-    # _dbscan_metrics_comparison(distances, files)
+    _dbscan_metrics_comparison(distances, files)
     return distances
 
 
@@ -58,13 +57,13 @@ def _compute_file_distances(files):
         progress.iterate_and_print()
     distances = _metrics_of_characteristics(characteristics,
                                             files,
-                                            dynamic_time_warping.norm_sqr)
+                                            metrics.dynamic_time_warping_sqr)
     return distances
 
 
 def _compute_file_characteristics(filename):
     signal = sound_file.load(filename)
-    signal = pre_processing.process(signal)
+    signal = preprocessing.process(signal)
     if save_preprocessed_files:
         sound_file.save(filename[:-4] + "_p.wav", signal)
     return mfcc.mfcc(signal)
@@ -142,7 +141,7 @@ def _dbscan_metrics_comparison(distances, files):
 
 
 def _run_dbscan_clustering(distances, files, chosen_eps):
-    clusters = dbscan.dbscan(distances, chosen_eps, 2)
+    clusters = clustering.dbscan(distances, chosen_eps, 2)
     cluster_goodness = _analyze_dbscan_results(distances, files, clusters)
     _print_dbscan_clustering_goodness(cluster_goodness, len(distances))
 
