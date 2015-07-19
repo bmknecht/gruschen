@@ -1,15 +1,16 @@
-import dbscan
-import dynamic_time_warping
-import metrics
-import mfcc
-import operator
-import pre_processing
-import sound_file
 import statistics
 import time
 
-
 import numpy as np
+
+from . import (
+    dbscan,
+    dynamic_time_warping,
+    metrics,
+    mfcc,
+    pre_processing,
+    sound_file,
+)
 
 
 save_preprocessed_files = False
