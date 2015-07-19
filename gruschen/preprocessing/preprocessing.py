@@ -1,12 +1,11 @@
 from . import (
     cutoff,
-    hiss_reduction,
     normalization,
     trimming,
 )
 
 
-def process(signal, advanced=False):
+def process(signal, advanced=True):
     signal = normalization.normalize(signal)
     if advanced:
         signal = _advanced_preprocessing(signal)
