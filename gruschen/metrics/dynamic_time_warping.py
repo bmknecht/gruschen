@@ -30,7 +30,7 @@ def _cost_vector_euclidean(diff, m):
     return np.fromiter((np.inner(d, d) for d in diff), np.float, m)
 
 
-# alternative to euclidean distance, test later
+# alternative to euclidean distance, test later (terrible performance!)
 def _cost_vector_absolute(diff, m):
     return np.fromiter((np.linalg.norm(d, 1) for d in diff), np.float, m)
 
