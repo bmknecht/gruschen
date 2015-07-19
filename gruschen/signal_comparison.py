@@ -9,6 +9,7 @@ from . import (
 )
 
 from .metrics import dynamic_time_warping as dtw
+from .metrics import linear_stretch as linear_stretch
 from .clustering import dbscan
 from .preprocessing import preprocessing as prepro
 
