@@ -23,7 +23,7 @@ def _find_lowest_peak_volume_window(windows):
 
 
 def _split_signal_into_windows(signal):
-    samples_per_window = utility.compute_samples_per_window(signal.sampleRate)
+    samples_per_window = utility.window_size()
     splittable_size = samples_per_window * (len(signal) // samples_per_window)
     window_range = range(0, splittable_size, samples_per_window)
     return np.array([signal[i:i+samples_per_window] for i in window_range])
