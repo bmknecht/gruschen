@@ -2,16 +2,20 @@ import numpy as np
 
 
 # dynamic time warping - squared
-def dynamic_time_warping_sqr(s, t):
+def get_metric(s, t):
+    return _get_dtw_matrix(s, t)[-1, -1]
+
+
+def _get_dtw_matrix(s, t):
     n = len(s)
     m = len(t)
     dtw = _prepare_dtw_matrix(n, m)
     for i in range(1, n+1):
         row = dtw[i, :]
-        cost = _cost_vector(s[i-1] - t, m)
+        cost = _cost_vector_euclidean(s[i-1] - t, m)
         row[1:] = _row_prediction(cost, dtw[i-1, :])
         _row_adjustment(row, cost, m)
-    return dtw[-1, -1]
+    return dtw
 
 
 def _prepare_dtw_matrix(n, m):
@@ -22,7 +26,7 @@ def _prepare_dtw_matrix(n, m):
     return dtw
 
 
-def _cost_vector(diff, m):
+def _cost_vector_euclidean(diff, m):
     return np.fromiter((np.inner(d, d) for d in diff), np.float, m)
 
 
