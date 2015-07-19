@@ -16,7 +16,8 @@ def process(signal, advanced=False):
 
 def _advanced_preprocessing(signal):
     signal = trimming.trim_all_zeros(signal)
-    signal = hiss_reduction.hiss_reduction(signal)
-    signal = normalization.normalize_zero(signal)
+    # signal = hiss_reduction.hiss_reduction(signal)
+    # signal = normalization.normalize_zero(signal)
     signal = cutoff.cutoff(signal)
     signal = normalization.normalize(signal)
+    return signal
