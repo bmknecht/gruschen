@@ -95,21 +95,22 @@ def _metrics_of_characteristics(characteristics, files, metricFunction):
 def _print_comparison_with_correct_result(distances, files):
     print(("/" * 10) + "\ndistances of recordings with same text spoken:\n")
     unique_texts = set([f.text for f in files])
-    mean_correct_results = 0
+    dists_correct_results = []
     for text in unique_texts:
-        mean = _print_comparison_single_text(text, unique_texts, distances,
-                                             files)
-        mean_correct_results += mean
-    print("\nmean distance of same words: {}".format(mean_correct_results))
+        dists = _print_comparison_single_text(text, unique_texts, distances,
+                                              files)
+        dists_correct_results.extend(dists)
+    median_correct_results = statistics.median(dists_correct_results)
+    print("\nmedian distance of same words: {}".format(median_correct_results))
     # collect mean of all distances, excluding those of identical sounds
-    mean_all_distances = statistics.mean([
+    median_all_distances = statistics.median([
         distances[name1][name2] for name1 in distances
         for name2 in distances[name1]
         if distances[name1][name2] > 1e-7
         ])
-    print("mean of distances in general: {}".format(mean_all_distances))
-    print("ratio: 1 to {:.3f}".format(mean_all_distances /
-                                      mean_correct_results))
+    print("median of distances in general: {}".format(median_all_distances))
+    print("ratio: 1 to {:.3f}".format(median_all_distances /
+                                      median_correct_results))
 
 
 def _print_comparison_single_text(text, unique_texts, distances, files):
@@ -119,14 +120,13 @@ def _print_comparison_single_text(text, unique_texts, distances, files):
     distances_of_same_texts = [distances[f1][f2]
                                for f1 in files_with_text
                                for f2 in files_with_text if f1 != f2]
-    mean = statistics.mean(distances_of_same_texts)
-    print("mean: {}".format(mean))
+    print("mean: {}".format(statistics.mean(distances_of_same_texts)))
     standard_deviation = statistics.stdev(distances_of_same_texts)
     print("standard deviation: {}".format(standard_deviation))
     print("median: {}".format(statistics.median(distances_of_same_texts)))
     print("minimum: {}".format(min(distances_of_same_texts)))
     print("maximum: {}".format(max(distances_of_same_texts)))
-    return mean
+    return distances_of_same_texts
 
 
 # Density-based spatial clustering of applications with noise (DBSCAN)
