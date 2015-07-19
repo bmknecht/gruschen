@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-from signal_type import Signal
+from .signal_type import Signal
 
 
 class CutoffTest(unittest.TestCase):

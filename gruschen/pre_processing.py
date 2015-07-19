@@ -1,7 +1,9 @@
-import cutoff
-import hiss_reduction
-import normalization
-import trimming
+from . import (
+    cutoff,
+    hiss_reduction,
+    normalization,
+    trimming,
+)
 
 
 def process(signal, advanced=False):

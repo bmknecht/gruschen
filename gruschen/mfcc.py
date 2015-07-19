@@ -3,8 +3,8 @@ import unittest
 
 import numpy as np
 
-from signal_type import Signal
-import utility
+from . signal_type import Signal
+from . import utility
 
 
 # unit test

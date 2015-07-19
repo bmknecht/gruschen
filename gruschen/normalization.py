@@ -1,4 +1,4 @@
-from signal_type import Signal
+from .signal_type import Signal
 
 
 def normalize(signal):

@@ -7,7 +7,7 @@ import re
 import sys
 import unittest
 
-import signal_comparison
+from gruschen import signal_comparison
 
 
 class Recording:

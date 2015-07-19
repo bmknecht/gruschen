@@ -1,8 +1,8 @@
 import numpy as np
 
-import normalization
-from signal_type import Signal
-import utility
+from . import normalization
+from .signal_type import Signal
+from . import utility
 
 
 # hard-elbow hiss reduction

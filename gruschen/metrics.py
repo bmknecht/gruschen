@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-import dynamic_time_warping
+from . import dynamic_time_warping
 
 
 # unit test
