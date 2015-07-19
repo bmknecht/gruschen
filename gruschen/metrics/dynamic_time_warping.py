@@ -30,6 +30,11 @@ def _cost_vector_euclidean(diff, m):
     return np.fromiter((np.inner(d, d) for d in diff), np.float, m)
 
 
+# alternative to euclidean distance, test later
+def _cost_vector_absolute(diff, m):
+    return np.fromiter((np.linalg.norm(d, 1) for d in diff), np.float, m)
+
+
 def _row_prediction(cost, prev_row):
     return cost + np.minimum(prev_row[0:-1], prev_row[1:])
 
