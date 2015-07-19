@@ -2,7 +2,7 @@ import numpy as np
 
 
 # dynamic time warping - squared
-def norm_sqr(s, t):
+def dynamic_time_warping_sqr(s, t):
     n = len(s)
     m = len(t)
     dtw = _prepare_dtw_matrix(n, m)

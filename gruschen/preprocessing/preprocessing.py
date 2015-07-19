@@ -9,12 +9,12 @@ from . import (
 def process(signal, advanced=False):
     signal = normalization.normalize(signal)
     if advanced:
-        signal = _advanced_pre_processing(signal)
+        signal = _advanced_preprocessing(signal)
     signal = trimming.smart_trim(signal, 0.1)
     return signal
 
 
-def _advanced_pre_processing(signal):
+def _advanced_preprocessing(signal):
     signal = trimming.trim_all_zeros(signal)
     signal = hiss_reduction.hiss_reduction(signal)
     signal = normalization.normalize_zero(signal)
