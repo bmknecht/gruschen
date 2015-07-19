@@ -106,8 +106,11 @@ useful_mel_bins_count = 13
 
 # MFCC
 def mfcc(signal):
-    return (_mfcc_besides_pre_emphasizing(signal) +
-            _mfcc_besides_pre_emphasizing(_pre_emphasize(signal)))
+    coefficients =  (_mfcc_besides_pre_emphasizing(signal) +
+                     _mfcc_besides_pre_emphasizing(_pre_emphasize(signal)))
+    delta = _compute_deltas(coefficients)
+    delta_deltas = _compute_deltas(delta)
+    return coefficients + delta + delta_deltas
 
 
 def _mfcc_besides_pre_emphasizing(signal):
@@ -121,7 +124,7 @@ def _mfcc_besides_pre_emphasizing(signal):
 
 
 def _pre_emphasize(signal):
-    return signal - 0.97 * np.append(np.array([0]), signal[0:len(signal)-1])
+    return signal - 0.97 * np.append(np.array([0]), signal[0:-1])
 
 
 def _split_into_frame(signal):
@@ -227,3 +230,9 @@ def _zero_highest_frequency(signal):
     for i in range(len(signal)):
         signal[i][-1] = 0
     return [np.fft.irfft(frame) for frame in signal]
+
+
+def _compute_deltas(vec):
+    npcoeff = np.array(vec)
+    npdelta = npcoeff - np.array([np.append(k[0], k[0:-1]) for k in npcoeff])
+    return npdelta.tolist()
