@@ -10,7 +10,7 @@ class Cluster:
         self.members = self.members.union(other_set)
 
 
-def dbscan(metrics, eps, minimum_points_per_cluster):
+def cluster_data(metrics, eps, minimum_points_per_cluster):
     clusters = []
     visited = set()
     noise = set()

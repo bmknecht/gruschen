@@ -4,12 +4,13 @@ import time
 import numpy as np
 
 from . import (
-    clustering,
-    metrics,
     mfcc,
-    preprocessing,
     sound_file,
 )
+
+from .metrics import dynamic_time_warping as dtw
+from .clustering import dbscan
+from .preprocessing import preprocessing as prepro
 
 
 save_preprocessed_files = False
@@ -57,13 +58,13 @@ def _compute_file_distances(files):
         progress.iterate_and_print()
     distances = _metrics_of_characteristics(characteristics,
                                             files,
-                                            metrics.dynamic_time_warping_sqr)
+                                            dtw.get_metric)
     return distances
 
 
 def _compute_file_characteristics(filename):
     signal = sound_file.load(filename)
-    signal = preprocessing.process(signal)
+    signal = prepro.process(signal)
     if save_preprocessed_files:
         sound_file.save(filename[:-4] + "_p.wav", signal)
     return mfcc.mfcc(signal)
@@ -141,7 +142,7 @@ def _dbscan_metrics_comparison(distances, files):
 
 
 def _run_dbscan_clustering(distances, files, chosen_eps):
-    clusters = clustering.dbscan(distances, chosen_eps, 2)
+    clusters = dbscan.cluster_data(distances, chosen_eps, 2)
     cluster_goodness = _analyze_dbscan_results(distances, files, clusters)
     _print_dbscan_clustering_goodness(cluster_goodness, len(distances))
 
