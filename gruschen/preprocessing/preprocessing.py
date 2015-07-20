@@ -5,7 +5,7 @@ from . import (
 )
 
 
-def process(signal, advanced=True):
+def process(signal, advanced=False):
     signal = normalization.normalize(signal)
     if advanced:
         signal = _advanced_preprocessing(signal)
