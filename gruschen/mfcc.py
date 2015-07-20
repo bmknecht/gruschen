@@ -17,23 +17,24 @@ class MFCCTest(unittest.TestCase):
         return np.array([math.sin(x) for x in range(self.testSize)])
 
     def test_pre_emphasize(self):
-        test_signal = _pre_emphasize(np.array([_ for _ in
-                                               range(self.testSize)]))
-        predictor_index = self.testSize - 1
-        predictor = ((predictor_index - test_signal[predictor_index-1]) /
-                     predictor_index)
-        for i in range(2, len(test_signal)):
-            self.assertLess(abs(predictor - (i+1 - test_signal[i]) / i), 0.1)
+        signal = np.array([_ for _ in range(self.testSize)])
+        pre_signal = _pre_emphasize(signal)
+        for i in range(1, len(signal)):
+            self.assertEqual(pre_signal[i], signal[i] - 0.97 * signal[i-1])
 
     def test_split_into_frame(self):
         frames = _split_into_frame(Signal([_ for _ in
                                            range(self.commonSampleRates[1])],
                                           self.commonSampleRates[0]))
-
-        for n, frame in enumerate(frames):
-            self.assertEqual(len(frame), len(frames[0]))
-            for i, v in enumerate(frame):
-                self.assertEqual(v, n * len(frame) + i)
+        framesize = len(frames[0])
+        self.assertTrue(framesize % 2 == 0)
+        for i in range(1, len(frames)-1):
+            self.assertEqual(len(frames[i-1]), len(frames[i]))
+            self.assertEqual(len(frames[i]), len(frames[i+1]))
+            self.assertTrue((frames[i-1][framesize//2:].asnparray() ==
+                             frames[i][0:framesize//2].asnparray()).all())
+            self.assertTrue((frames[i][framesize//2:].asnparray() ==
+                             frames[i+1][0:framesize//2].asnparray()).all())
 
     def is_power_of_two(self, n):
         return n == 2 ** int(math.log2(n))
@@ -53,8 +54,11 @@ class MFCCTest(unittest.TestCase):
                            for _ in range(not_just_one)])
         for window in windows:
             for i in range(len(window) // 2 - 1):
-                self.assertLess(window[i], window[i+1])
+                weight = 0.54 - 0.46 * np.cos(2*math.pi*i / (self.testSize-1))
+                self.assertAlmostEqual(window[i], weight * impactful_number)
                 self.assertAlmostEqual(window[i], window[len(window) - 1 - i])
+        for i in range(1, len(windows)):
+            self.assertTrue((windows[i-1] == windows[i]).all())
 
     def test_fft(self):
         a_lot = 12
@@ -106,11 +110,11 @@ useful_mel_bins_count = 13
 
 # MFCC
 def mfcc(signal):
-    coefficients =  (_mfcc_besides_pre_emphasizing(signal) +
-                     _mfcc_besides_pre_emphasizing(_pre_emphasize(signal)))
+    coefficients = (_mfcc_besides_pre_emphasizing(signal) +
+                    _mfcc_besides_pre_emphasizing(_pre_emphasize(signal)))
     delta = _compute_deltas(coefficients)
-    delta_deltas = _compute_deltas(delta)
-    return coefficients + delta + delta_deltas
+    # delta_deltas = _compute_deltas(delta)
+    return coefficients + delta  # + delta_deltas
 
 
 def _mfcc_besides_pre_emphasizing(signal):
@@ -129,10 +133,10 @@ def _pre_emphasize(signal):
 
 def _split_into_frame(signal):
     frame_size, frame_overlap = _frame_characteristics(signal.sampleRate)
-    return [_frame(signal, frame_size, i) for i in
-            range(frame_overlap,
-                  len(signal)-frame_overlap,
-                  int(frame_size))]
+    return [signal[i-frame_size//2:i+frame_size//2] for i in
+            range(frame_size//2,
+                  len(signal)-frame_size//2,
+                  int(frame_overlap))]
 
 
 def _frame_characteristics(sample_rate):
@@ -142,11 +146,6 @@ def _frame_characteristics(sample_rate):
                                        sample_rate) < lowest_time_per_frame:
         frame_size *= 2
     return frame_size, frame_size // 2
-
-
-def _frame(signal, frame_size, i):
-    assert frame_size % 2 == 0
-    return signal[i-frame_size//2:i+frame_size//2]
 
 
 def _window(signal):
