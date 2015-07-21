@@ -59,13 +59,13 @@ def _compute_file_distances(files):
         progress.iterate_and_print()
     distances = _metrics_of_characteristics(characteristics,
                                             files,
-                                            dtw.get_metric)
+                                            linear_stretch.get_metric)
     return distances
 
 
 def _compute_file_characteristics(filename):
     signal = sound_file.load(filename)
-    signal = prepro.process(signal)
+    # signal = prepro.process(signal)
     if save_preprocessed_files:
         sound_file.save(filename[:-4] + "_p.wav", signal)
     return mfcc.mfcc(signal)
@@ -90,7 +90,6 @@ def _metrics_of_characteristics(characteristics, files, metricFunction):
                 distances[f1][f2] = metric
                 distances[f2][f1] = metric
                 progress.iterate_and_print()
-
     return distances
 
 

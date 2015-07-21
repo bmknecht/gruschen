@@ -9,7 +9,7 @@ def process(signal, advanced=False):
     signal = normalization.normalize(signal)
     if advanced:
         signal = _advanced_preprocessing(signal)
-    signal = trimming.smart_trim(signal, 0.1)
+    # signal = trimming.smart_trim(signal, 0.1)
     return signal
 
 
