@@ -78,16 +78,71 @@ class MFCCTest(unittest.TestCase):
                 else:
                     self.assertAlmostEqual(signal[i], 0)
 
+    def test_mel_transformations(self):
+        test = [50, 100, 200, 300, 400, 500]
+        transformed = [_mel_transform(t) for t in test]
+        test2 = _mel_transform_invert(transformed)
+        self.assertEqual(len(test), len(transformed))
+        validation = [77.75568921108743,
+                      150.49127889683163,
+                      283.2339944477894,
+                      401.97639977236383,
+                      509.39197126252225,
+                      607.4547050090661]
+        for i in range(len(transformed)):
+            self.assertTrue(abs(transformed[i] - validation[i]) < 1e-2)
+        self.assertEqual(len(test), len(test2))
+        for i in range(len(test)):
+            self.assertAlmostEqual(test2[i], test[i])
+
+    def test_mel_bin_center(self):
+        global mel_bins_count
+        old_mel_bins_count = mel_bins_count
+        mel_bins_count = 12
+        centers = _mel_bin_center(16e3, 512)
+        validation = [9, 16, 25, 35, 47, 63, 81, 104, 132, 165, 206, 256]
+        for i in range(len(centers)):
+            self.assertLess(abs(centers[i] - validation[i]), 2)
+        mel_bins_count = old_mel_bins_count
+
     def test_mel_filtering(self):
-        for sample_rate in self.commonSampleRates:
-            not_just_one = 2
-            windows = [Signal([1 for _ in range(utility.window_size())],
-                              sample_rate)
-                       for _ in range(not_just_one)]
-            signal = _mel_filtering(windows)
-            for i in range(len(signal[0])-1):
-                self.assertLessEqual(signal[0][i]-1, signal[0][i+1])
-                self.assertEqual(signal[0][i], signal[1][i])
+        signal = [Signal(abs(self.sine()), 8000) for _ in range(3)]
+        mel_sums = _mel_filtering(signal)
+        self.assertEqual(len(mel_sums), len(signal))
+        for i in range(3):
+            for j in range(len(mel_sums[i])):
+                self.assertLess(mel_sums[i][j], sum(signal[i]))
+
+    def test_mel_filter_window_sum(self):
+        signal = np.array(list(range(1, 11)))
+        bin_centers = [0, 4, 10]
+        s = _mel_filter_window_sum(signal, bin_centers)
+
+        self.assertAlmostEqual(s, 88/3)
+
+    def test_cepstral_coefficients(self):
+        pass
+
+    def test_cepstral_single_coefficient(self):
+        pass
+
+    def test_zero_highest_frequency(self):
+        spectrum = [9, 9, 9, 9, 9, 9, 9]
+        zeroed_signal = _zero_highest_frequency([np.fft.irfft(spectrum)])
+        zeroed_spectrum = np.fft.rfft(zeroed_signal[0])
+        self.assertAlmostEqual(zeroed_spectrum[-1], 0)
+        for i in range(len(spectrum)-1):
+            self.assertAlmostEqual(spectrum[i], 9)
+
+    def test_compute_deltas(self):
+        signal = [list(range(1, 11)), list(range(11, 21))]
+        delta = _compute_deltas(signal)
+        self.assertEqual(len(delta), 2)
+        self.assertEqual(len(delta[0]), 10)
+        self.assertEqual(len(delta[1]), 10)
+        for i in range(len(delta)):
+            self.assertEqual(delta[0][i], 1)
+            self.assertEqual(delta[0][i], 1)
 
     def test_non_linear_transform(self):
         not_just_one = 2
@@ -112,9 +167,10 @@ useful_mel_bins_count = 13
 def mfcc(signal):
     coefficients = (_mfcc_besides_pre_emphasizing(signal) +
                     _mfcc_besides_pre_emphasizing(_pre_emphasize(signal)))
+    assert len(coefficients[0]) == useful_mel_bins_count
     delta = _compute_deltas(coefficients)
-    # delta_deltas = _compute_deltas(delta)
-    return coefficients + delta  # + delta_deltas
+    delta_deltas = _compute_deltas(delta)
+    return coefficients + delta + delta_deltas
 
 
 def _mfcc_besides_pre_emphasizing(signal):
@@ -167,7 +223,7 @@ def _fft(signal):
 
 def _mel_filtering(signal):
     center_of_bins = _mel_bin_center(signal[0].sampleRate, len(signal[0]) * 2)
-    return [np.array([_mel_filter_window_sum(frame, i, center_of_bins[i-1:i+2])
+    return [np.array([_mel_filter_window_sum(frame, center_of_bins[i-1:i+2])
                       for i in range(1, len(center_of_bins)-1)])
             for frame in signal]
 
@@ -178,28 +234,28 @@ def _mel_bin_center(samplerate, fft_size):
                                          _mel_transform(samplerate / 2 - 1),
                                          mel_bins_count)
     center_frequencies = _mel_transform_invert(center_mel_frequencies)
-    center_spectrum_indices = ((fft_size / 2 + 1) /
+    center_spectrum_indices = ((fft_size-1) /
                                samplerate * center_frequencies)
     return np.round(center_spectrum_indices).astype(int)
 
 
 def _mel_transform(frequency):
-    return 2595 * math.log10(1 + frequency / 700)
+    return 1127.01048 * math.log(1 + float(frequency) / 700.)
 
 
 def _mel_transform_invert(mel_frequencies):
-    return np.array([(10**(f / 2595)-1) * 700 for f in mel_frequencies])
+    return np.array([(math.exp(f / 1127.01048)-1)*700 for f in mel_frequencies])
 
 
-def _mel_filter_window_sum(signal, bin_index, center_of_bins):
+def _mel_filter_window_sum(signal, center_of_bins):
     a, b, c = center_of_bins
 
     def l1(x, y): return x / (b-a+1) * y
 
-    def l2(x, y): return (1 - x / (c-b+1)) * y
+    def l2(x, y): return (1 - x / (c-b)) * y
 
     return (sum(map(l1, range(1, b-a+2), signal[a:b+1])) +
-            sum(map(l2, range(0, c+1-b), signal[b:c+1])))
+            sum(map(l2, range(1, c-b), signal[b+1:c+1])))
 
 
 def _non_linear_transform(signal):
@@ -220,18 +276,19 @@ def _cepstral_single_coefficient(signal, index):
     cosine_sum = 0
     for f, freq in enumerate(signal):
         cosine_sum += freq * math.cos(math.pi * index /
-                                      (mel_bins_count-2) * (f - 0.5))
+                                      (mel_bins_count-1) * (f - 0.5))
     return cosine_sum
 
 
 def _zero_highest_frequency(signal):
-    signal = [np.fft.rfft(frame) for frame in signal]
+    signal = [np.fft.fft(frame) for frame in signal]
     for i in range(len(signal)):
         signal[i][-1] = 0
-    return [np.fft.irfft(frame) for frame in signal]
+        signal[i][len(signal[i])//2] = 0
+    return [np.real(np.fft.ifft(frame)) for frame in signal]
 
 
 def _compute_deltas(vec):
     npcoeff = np.array(vec)
-    npdelta = npcoeff - np.array([np.append(k[0], k[0:-1]) for k in npcoeff])
+    npdelta = npcoeff - np.array([np.append(0, k[0:-1]) for k in npcoeff])
     return npdelta.tolist()
