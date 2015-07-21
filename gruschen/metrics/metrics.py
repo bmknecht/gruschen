@@ -39,36 +39,23 @@ class MetricsTest(unittest.TestCase):
         sine = np.array([self.sine().tolist(),
                          self.sine().tolist(),
                          self.sine().tolist()])
-        self.assertEqual(testfunc(sine, sine)[-1, -1],
-                         dtw.get_metric(sine, sine))
+        self.assertAlmostEqual(testfunc(sine, sine)[-1, -1],
+                               dtw.get_metric(sine, sine))
         self.assertTrue((sine == self.sine()).all())
-
-    def test_dtw_prepare_dtw_matrix(self):
-        m = 3
-        n = 4
-        dtw_matrix = dtw._prepare_dtw_matrix(m, n)
-        self.assertEqual(dtw_matrix[0, 0], 0)
-        self.assertTrue((dtw_matrix[0, 1:] == float("inf")).all())
-        self.assertTrue((dtw_matrix[1:, 0] == float("inf")).all())
-        self.assertTrue((dtw_matrix[1:, 1:] == 0).all())
 
     def test_dtw_cost_vector_euclidean(self):
         vec = [np.array([1, 2]), np.array([2, -3])]
-        dist_sqr = dtw._cost_vector_euclidean(vec)
-        self.assertEqual(dist_sqr[0], 5)
-        self.assertEqual(dist_sqr[1], 13)
-
-    def test_dtw_cost_vector_absolute(self):
-        vec = [np.array([1, 2]), np.array([2, -3])]
-        dist_sqr = dtw._cost_vector_absolute(vec)
-        self.assertEqual(dist_sqr[0], 3)
-        self.assertEqual(dist_sqr[1], 5)
+        dist_sqr = [0, 0]
+        dtw._cost_vector_euclidean(dist_sqr, 0, vec)
+        self.assertEqual(dist_sqr[0], math.sqrt(5))
+        self.assertEqual(dist_sqr[1], math.sqrt(13))
 
     def test_dtw_row_prediction(self):
-        cost = 11
+        cost = np.array([11 for _ in range(6)])
         vec = np.array([1, 2, 3, 4, 5, 6, 7])
-        res = dtw._row_prediction(cost, vec)
-        self.assertTrue((res == np.array([12, 13, 14, 15, 16, 17])).all())
+        res = np.empty(len(vec)-1)
+        dtw._row_prediction(res, cost, vec)
+        self.assertTrue((res - np.array([12, 13, 14, 15, 16, 17]) < 1e-7).all())
 
     def test_dtw_row_adjustment(self):
         cost = np.array([1, 2, -1, 4, 11, -9, -1])
