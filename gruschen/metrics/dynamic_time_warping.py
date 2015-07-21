@@ -47,3 +47,10 @@ def _row_adjustment(row, cost):
     for j in range(1, len(row)):
         if row[j-1] + cost[j-1] < row[j]:   # is true 1 out of 5 times
             row[j] = row[j-1] + cost[j-1]
+
+
+def _row_no_prediction(cost, previous_row, row):
+    for j in range(1, len(row)):
+        row[j] = cost[j-1] + min(previous_row[j-1],
+                                 previous_row[j],
+                                 row[j-1])
