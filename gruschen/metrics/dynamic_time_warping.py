@@ -1,17 +1,15 @@
 import numpy as np
-cimport numpy as np
+
 
 # dynamic time warping - squared
 def get_metric(s, t):
     return _get_dtw_matrix(s, t)[-1, -1]
 
 
-cpdef _get_dtw_matrix(np.ndarray s, np.ndarray t) except *:
-    cdef unsigned int n = len(s)
-    cdef unsigned int m = len(t)
-    cdef np.ndarray dtw = _prepare_dtw_matrix(n, m)
-    cdef np.ndarray row = np.zeros(m+1, dtype=np.float)
-    cdef np.ndarray cost = np.zeros([xmax, ymax], dtype=np.float)
+def _get_dtw_matrix(s, t):
+    n = len(s)
+    m = len(t)
+    dtw = _prepare_dtw_matrix(n, m)
     for i in range(1, n+1):
         row = dtw[i, :]
         cost = _cost_vector_euclidean(s[i-1] - t)
@@ -20,7 +18,7 @@ cpdef _get_dtw_matrix(np.ndarray s, np.ndarray t) except *:
     return dtw
 
 
-cdef _prepare_dtw_matrix(unsigned int n, unsigned int m) except *:
+def _prepare_dtw_matrix(n, m):
     dtw = np.zeros((n+1, m+1))
     dtw[1:, 0] = float("inf")
     dtw[0, 1:] = float("inf")
@@ -28,7 +26,7 @@ cdef _prepare_dtw_matrix(unsigned int n, unsigned int m) except *:
     return dtw
 
 
-cdef _cost_vector_euclidean(diff, cost):
+def _cost_vector_euclidean(diff):
     return np.fromiter((np.inner(d, d) for d in diff),
                        np.float,
                        len(diff))
@@ -41,17 +39,17 @@ def _cost_vector_absolute(diff):
                        len(diff))
 
 
-cdef _row_prediction(cost, prev_row, row):
+def _row_prediction(cost, prev_row):
     return cost + np.minimum(prev_row[0:-1], prev_row[1:])
 
 
-cdef _row_adjustment(row, cost):
+def _row_adjustment(row, cost):
     for j in range(1, len(row)):
         if row[j-1] + cost[j-1] < row[j]:   # is true 1 out of 5 times
             row[j] = row[j-1] + cost[j-1]
 
 
-cdef _row_no_prediction(cost, previous_row, row):
+def _row_no_prediction(cost, previous_row, row):
     for j in range(1, len(row)):
         row[j] = cost[j-1] + min(previous_row[j-1],
                                  previous_row[j],
