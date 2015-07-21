@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.interpolate import interp1d
 
 
 def get_metric(signal1, signal2):
@@ -14,21 +15,5 @@ def get_metric(signal1, signal2):
 
 def _stretch_signal(signal, new_length):
     assert len(signal) < new_length
-    return np.array([_interpolate_value(signal,
-                                        i,
-                                        new_length)
-                     for i in range(new_length)])
-
-
-def _interpolate_value(signal, new_length_index, new_length):
-    assert new_length_index < new_length
-    assert len(signal) < new_length
-    old_length_exact_index = (new_length_index / (new_length-1) *
-                              (len(signal)-1))
-    old_length_index = int(old_length_exact_index)
-    if old_length_index != len(signal) - 1:
-        length_factor = old_length_exact_index - old_length_index
-        return ((1 - length_factor) * signal[old_length_index] +
-                length_factor * signal[old_length_index+1])
-    else:
-        return signal[-1]
+    f = interp1d([_ for _ in range(len(signal))], signal, kind='cubic', axis=0)
+    return np.array([f(t) for t in np.linspace(0, len(signal)-1, new_length)])

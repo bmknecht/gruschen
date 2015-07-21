@@ -2,6 +2,8 @@ import math
 import unittest
 
 import numpy as np
+import scipy.fftpack as scipyfft
+import scipy.signal
 
 from . signal_type import Signal
 from . import utility
@@ -158,19 +160,19 @@ class MFCCTest(unittest.TestCase):
 
 logarithm_smallest_argument = 1e-22
 logarithm_bottom_line = -50
-lowest_useful_frequency = 300
+lowest_useful_frequency = 200
 mel_bins_count = 25
 useful_mel_bins_count = 13
 
 
 # MFCC
 def mfcc(signal):
-    coefficients = (_mfcc_besides_pre_emphasizing(signal) +
-                    _mfcc_besides_pre_emphasizing(_pre_emphasize(signal)))
-    assert len(coefficients[0]) == useful_mel_bins_count
-    delta = _compute_deltas(coefficients)
-    delta_deltas = _compute_deltas(delta)
-    return coefficients + delta + delta_deltas
+    coefficients = _mfcc_besides_pre_emphasizing(_pre_emphasize(signal))
+    delta = _compute_deltas(np.array(coefficients))
+    return _combine_signals([coefficients,
+                             delta,
+                             _compute_deltas(delta),
+                             _mfcc_besides_pre_emphasizing(signal)])
 
 
 def _mfcc_besides_pre_emphasizing(signal):
@@ -197,7 +199,7 @@ def _split_into_frame(signal):
 
 def _frame_characteristics(sample_rate):
     frame_size = 128
-    lowest_time_per_frame = 15
+    lowest_time_per_frame = 20
     while utility.sample_count_to_time(frame_size,
                                        sample_rate) < lowest_time_per_frame:
         frame_size *= 2
@@ -205,9 +207,7 @@ def _frame_characteristics(sample_rate):
 
 
 def _window(signal):
-    n = len(signal[0])
-    hamming_weights = 0.54 - 0.46 * np.cos(2*math.pi*np.arange(n) / (n-1))
-    return [frame * hamming_weights for frame in signal]
+    return [frame * scipy.signal.hamming(len(signal[0])) for frame in signal]
 
 
 def _fft(signal):
@@ -267,17 +267,7 @@ def _non_linear_transform(signal):
 
 
 def _cepstral_coefficients(signal):
-    return [np.array([_cepstral_single_coefficient(frame, i)
-                      for i in range(useful_mel_bins_count)])
-            for frame in signal]
-
-
-def _cepstral_single_coefficient(signal, index):
-    cosine_sum = 0
-    for f, freq in enumerate(signal):
-        cosine_sum += freq * math.cos(math.pi * index /
-                                      (mel_bins_count-1) * (f - 0.5))
-    return cosine_sum
+    return [scipyfft.dct(frame)[:useful_mel_bins_count] for frame in signal]
 
 
 def _zero_highest_frequency(signal):
@@ -292,3 +282,12 @@ def _compute_deltas(vec):
     npcoeff = np.array(vec)
     npdelta = npcoeff - np.array([np.append(0, k[0:-1]) for k in npcoeff])
     return npdelta.tolist()
+
+
+def _combine_signals(vecs):
+    t = [frame.tolist() for frame in vecs[0]]
+    for i in range(1, len(vecs)):
+        assert len(t) == len(vecs[i])
+        for j in range(len(t)):
+            t[j].extend(vecs[i][j])
+    return [np.array(frame) for frame in t]
