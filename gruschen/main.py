@@ -5,7 +5,6 @@ import glob
 import os
 import re
 import sys
-import unittest
 
 from gruschen import signal_comparison
 
@@ -18,10 +17,6 @@ class Recording:
 
     def __repr__(self):
         return u"[{}] {} ({})".format(self.text, self.name, self.filename)
-
-
-def run_tests():
-    unittest.main()
 
 
 def getargs():
@@ -68,7 +63,6 @@ def to_recordings(directories, files):
         for directory in directories
         for fpath in glob.glob(os.path.join(directory, "*.wav"))
     ]
-    print(recordings)
     return recordings
 
 
@@ -76,7 +70,6 @@ def main(args):
     args = getargs()
     recordings = to_recordings(args.voice_dir, args.voice_files)
     distances = signal_comparison.compare_files(recordings)
-    print(distances)
     return 0
 
 
