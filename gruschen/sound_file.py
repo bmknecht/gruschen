@@ -5,8 +5,6 @@ import wave
 
 import numpy as np
 
-from .signal_type import Signal
-
 
 class SoundFileTest(unittest.TestCase):
     maxDiff = None
@@ -41,24 +39,23 @@ def load(filename):
                                             sampwidth_to_character[sampwidth]),
                              frames)
 
-    return Signal(np.array(filedata[0::nchannels], dtype=np.float), samplerate)
+    return np.array(filedata[0::nchannels], dtype=np.float), samplerate
 
 
-def save(filename, signal):
+def save(filename, signal, samplerate):
     signal = _convert_number_type(signal, exportNumberType)
-    _write_to_wave_file(filename, signal)
+    _write_to_wave_file(filename, signal, samplerate)
 
 
 def _convert_number_type(signal, number_type):
-    return Signal((np.array([x.real for x in signal]) *
-                  (min(np.iinfo(number_type).max,
-                       abs(np.iinfo(number_type).min)) - 1)),
-                  signal.sampleRate)
+    return list(np.array([x.real for x in signal]) *
+                (min(np.iinfo(number_type).max,
+                     abs(np.iinfo(number_type).min)) - 1))
 
 
-def _write_to_wave_file(filename, signal):
+def _write_to_wave_file(filename, signal, samplerate):
     wavfile = wave.open(filename, mode='wb')
-    wavfile.setparams((1, exportNumberType(1).itemsize, signal.sampleRate,
+    wavfile.setparams((1, exportNumberType(1).itemsize, samplerate,
                       len(signal), 'NONE', 'not compressed'))
-    wavfile.writeframes(np.array(signal.asnparray(), dtype=exportNumberType))
+    wavfile.writeframes(np.array(signal, dtype=exportNumberType))
     wavfile.close()

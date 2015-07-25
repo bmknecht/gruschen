@@ -1,109 +1,109 @@
 import json
-import statistics
 
-from . import (
-    clustering,
-    mfcc,
-    sound_file,
+import pandas
+from progress.bar import Bar as ProgressBar
+
+from .features import (
+    mfcc
 )
-
-from .metrics import dynamic_time_warping as dtw
-from .metrics import dtw_delta
-from .metrics import linear_stretch as linear_stretch
-from .clustering import dbscan
+from .metrics import (
+    dynamic_time_warping as dtw,
+    dtw_delta,
+    linear_stretch as linear_stretch
+)
+from . import sound_file
 from .preprocessing import preprocessing as prepro
-from .progress_printer import ProgressPrinter
 
 
 save_preprocessed_files = False
 
 
 def compare_files(files):
-    signals = _apply_method_to_all({f: f.filename for f in files},
-                                   sound_file.load,
-                                   'loading files')
-    signals = _apply_method_to_all(signals,
-                                   prepro.process,
-                                   'preprocessing signals')
-    characteristics = _apply_method_to_all(signals,
-                                           mfcc.framed_power_spectrum,
-                                           'computing characteristics')
-    distances = _compute_signals_distances(characteristics,
-                                           dtw)
+    signals, samplerates = _load_files({f: f.filename for f in files},
+                                       sound_file.load)
+    signals = _preprocess_signals(signals, samplerates,
+                                  prepro.process)
+    features = _compute_signal_features(signals, samplerates,
+                                        mfcc.extract_features)
+    distances = _compute_signals_distances(features,
+                                           linear_stretch)
     with open('distances.dict', 'w') as f:
         json.dump({d1.name: {d2.name: distances[d1][d2] for d2 in distances}
                    for d1 in distances}, f)
     _summarize_distances(distances)
-    _clustering(distances, files, dbscan)
+    # _clustering(distances, files, dbscan)
     return distances
 
 
-def _apply_method_to_all(vec, method, message):
-    print(message)
-    progress = ProgressPrinter(len(vec))
-
-    def loop_iteration(x):
-        progress.iterate_and_print()
+def _loop_iteration_progress(progressbar, x):
+        progressbar.next()
         return x
 
-    return {v: loop_iteration(method(vec[v])) for v in vec}
+
+def _load_files(filenames, method):
+    progressbar = ProgressBar('loading files', max=len(filenames))
+    return_values = {v: _loop_iteration_progress(progressbar,
+                                                 method(filenames[v]))
+                     for v in filenames}
+    signals = {name: return_values[name][0] for name in return_values}
+    samplerates = {name: return_values[name][1] for name in return_values}
+    return signals, samplerates
 
 
-def _compute_signals_distances(characteristics, metric):
-    print("computing distances:")
-    progress = ProgressPrinter((len(characteristics)**2 -
-                                len(characteristics)) / 2)
-    distances = {f: {f: 0} for f in characteristics}
-    for f1 in characteristics:
-        for f2 in characteristics:
+def _preprocess_signals(signals, samplerates, method):
+    progressbar = ProgressBar('preprocessing', max=len(signals))
+    return {v: _loop_iteration_progress(progressbar,
+                                        method(signals[v], samplerates[v]))
+            for v in signals}
+
+
+def _compute_signal_features(signals, samplerates, method):
+    progressbar = ProgressBar('computing features', max=len(signals))
+    return {v: _loop_iteration_progress(progressbar,
+                                        method(signals[v], samplerates[v]))
+            for v in signals}
+
+
+def _compute_signals_distances(features, metric):
+    progressbar = ProgressBar('computing distances',
+                              max=(len(features)**2 - len(features)) / 2)
+    distances = {f: {f: 0} for f in features}
+    for f1 in features:
+        for f2 in features:
             if f2 not in distances[f1]:
-                m = metric.get_metric(characteristics[f1], characteristics[f2])
+                m = metric.get_metric(features[f1], features[f2])
                 distances[f1][f2] = distances[f2][f1] = m
-                progress.iterate_and_print()
+                progressbar.next()
     return distances
 
 
 def _summarize_distances(distances):
-    print(("/" * 10) + "\ndistances of recordings with same text spoken:\n")
+    print("\ndistances of recordings with same text spoken:")
     unique_texts = set([d.text for d in distances])
     for text in unique_texts:
         _print_comparison_single_text(text, distances)
-    correct_result_distances = [
-        distances[d1][d2] for d1 in distances for d2 in distances[d1]
-        if d1.text == d2.text and d1 != d2
-    ]
     all_distances = [
         distances[d1][d2] for d1 in distances for d2 in distances[d1] if
         d1 != d2
     ]
-    median_correct_results = statistics.median(correct_result_distances)
-    print("\nmedian distance of same words: {}".format(median_correct_results))
-    median_all_distances = statistics.median(all_distances)
-    print("median of distances in general: {}".format(median_all_distances))
-    print("ratio: 1 to {:.3f}".format(median_all_distances /
-                                      median_correct_results))
+    print("\ndistances in general:")
+    print(pandas.Series(all_distances).describe())
 
-    mean_correct_results = statistics.mean(correct_result_distances)
-    print("\nmean distance of same words: {}".format(mean_correct_results))
-    mean_all_distances = statistics.mean(all_distances)
-    print("mean of distances in general: {}".format(mean_all_distances))
-    print("ratio: 1 to {:.3f}".format(mean_all_distances /
-                                      mean_correct_results))
+    correct_result_distances = [
+        distances[d1][d2] for d1 in distances for d2 in distances[d1]
+        if d1.text == d2.text and d1 != d2
+    ]
+    print("\ndistances of same words:")
+    print(pandas.Series(correct_result_distances).describe())
 
 
 def _print_comparison_single_text(text, distances):
-    print(text + ": ")
+    print("\n" + text + ": ")
     distances_of_same_texts = [distances[d1][d2]
                                for d1 in distances
                                for d2 in distances if d1 != d2 and
                                d1.text == d2.text]
-    print("mean: {}".format(statistics.mean(distances_of_same_texts)))
-    print("standard deviation: {}".format(statistics.stdev(
-        distances_of_same_texts
-    )))
-    print("median: {}".format(statistics.median(distances_of_same_texts)))
-    print("minimum: {}".format(min(distances_of_same_texts)))
-    print("maximum: {}".format(max(distances_of_same_texts)))
+    print(pandas.Series(distances_of_same_texts).describe())
 
 
 def _clustering(distances, files, clustering_method):
