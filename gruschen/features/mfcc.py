@@ -5,9 +5,7 @@ import numpy as np
 import scipy.fftpack as scipyfft
 import scipy.signal
 
-
-from . signal_type import Signal
-from . import utility
+from .. import utility
 
 
 # unit test
@@ -42,9 +40,9 @@ class MFCCTest(unittest.TestCase):
     def is_power_of_two(self, n):
         return n == 2 ** int(math.log2(n))
 
-    def test_frame_characteristics(self):
+    def test_frame_properties(self):
         for sample_rate in self.commonSampleRates:
-            frame_size, frame_overlap = _frame_characteristics(sample_rate)
+            frame_size, frame_overlap = _frame_properties(sample_rate)
             self.assertEqual(frame_size, frame_overlap * 2)
             self.assertTrue(self.is_power_of_two(frame_size))
             self.assertTrue(self.is_power_of_two(frame_overlap))
@@ -160,13 +158,13 @@ class MFCCTest(unittest.TestCase):
 
 
 logarithm_smallest_argument = 1e-22
-logarithm_bottom_line = -50
+logarithm_bottom_line = float(-50)
 lowest_useful_frequency = 300
 mel_bins_count = 25
 useful_mel_bins_count = 13
 
 
-def framed_power_spectrum(signal):
+def framed_power_spectrum(signal, samplerate):
     win_len = 200
     signal = [np.fft.rfft(signal[i:i+win_len])
               for i in range(0, len(signal)-win_len+1, win_len)]
@@ -177,38 +175,39 @@ def framed_power_spectrum(signal):
 
 
 # MFCC
-def compute_characteristics(signal):
-    coefficients = _mfcc_besides_pre_emphasizing(_pre_emphasize(signal))
+def extract_features(signal, samplerate):
+    coefficients = _mfcc_besides_pre_emphasizing(_pre_emphasize(signal),
+                                                 samplerate)
     delta = _compute_deltas(np.array(coefficients))
     return _combine_signals([coefficients,
                              delta,
                              _compute_deltas(delta)])
 
 
-def _mfcc_besides_pre_emphasizing(signal):
-    signal = _split_into_frame(signal)
+def _mfcc_besides_pre_emphasizing(signal, samplerate):
+    signal = _split_into_frame(signal, samplerate)
     signal = _window(signal)
     signal = _fft(signal)
-    signal = _mel_filtering(signal)
+    signal = _mel_filtering(signal, samplerate)
     signal = _non_linear_transform(signal)
     signal = _cepstral_coefficients(signal)
-    # signal = _zero_highest_frequency(signal)
+    signal = _zero_highest_frequency(signal)
     return signal
 
 
 def _pre_emphasize(signal):
-    return signal[1:] - 0.97 * signal[0:-1].asnparray()
+    return signal[1:] - 0.97 * signal[0:-1]
 
 
-def _split_into_frame(signal):
-    frame_size, frame_overlap = _frame_characteristics(signal.sampleRate)
+def _split_into_frame(signal, samplerate):
+    frame_size, frame_overlap = _frame_properties(samplerate)
     return [signal[i-frame_size//2:i+frame_size//2-1] for i in
             range(frame_size//2,
                   len(signal)-frame_size//2,
                   int(frame_overlap))]
 
 
-def _frame_characteristics(sample_rate):
+def _frame_properties(sample_rate):
     frame_size = 128
     lowest_time_per_frame = 20
     while utility.sample_count_to_time(frame_size,
@@ -228,12 +227,11 @@ def _fft(signal):
     def abs_square_array(x): return np.fromiter((abs_square(c) for c in x),
                                                 np.float,
                                                 len(x))
-    return [Signal(abs_square_array(np.fft.rfft(frame)), signal[0].sampleRate)
-            for frame in signal]
+    return [abs_square_array(np.fft.rfft(frame)) for frame in signal]
 
 
-def _mel_filtering(signal):
-    center_of_bins = _mel_bin_center(signal[0].sampleRate, len(signal[0]) * 2)
+def _mel_filtering(signal, samplerate):
+    center_of_bins = _mel_bin_center(samplerate, len(signal[0]) * 2)
     return [np.array([_mel_filter_window_sum(frame, center_of_bins[i:i+3])
                       for i in range(len(center_of_bins)-2)])
             for frame in signal]
@@ -244,7 +242,8 @@ def _mel_bin_center(samplerate, fft_size):
     center_mel_frequencies = np.linspace(lowest_uselful_mel_frequency,
                                          _mel_transform(samplerate / 2 - 1),
                                          mel_bins_count)
-    center_frequencies = _mel_transform_invert(center_mel_frequencies)
+    center_frequencies = np.array([_mel_transform_invert(x) for
+                                   x in center_mel_frequencies])
     center_spectrum_indices = (fft_size / samplerate * center_frequencies)
     return np.round(center_spectrum_indices).astype(int)
 
@@ -253,8 +252,8 @@ def _mel_transform(frequency):
     return 1127.01048 * math.log(1 + float(frequency) / 700.)
 
 
-def _mel_transform_invert(mel_frequencies):
-    return np.array([(math.exp(f / 1127.01048)-1)*700 for f in mel_frequencies])
+def _mel_transform_invert(mel_frequency):
+    return (math.exp(mel_frequency / 1127.01048)-1)*700
 
 
 def _mel_filter_window_sum(signal, center_of_bins):
